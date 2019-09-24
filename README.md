@@ -1,6 +1,6 @@
 # Turnstile 
 
->> Record key-value-environment triplets and fail builds based on increase or decrease. 
+> Record key-value-environment triplets and fail builds based on increase or decrease. 
 
 
 Requires a backing storage API. 
