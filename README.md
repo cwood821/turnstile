@@ -1,14 +1,13 @@
 # Turnstile 
 
-> Record key-value-environment triplets and fail builds based on increase or decrease. 
-
-
-Requires a backing storage API. 
+> Record key-value-environment triplets and fail builds based on increase or decrease
 
 ## Usage
 ```
-turnstile --key npm-vulnerabilities --value=12 --env local
+turnstile --key npm-vulnerabilities --value 12 --env local
 ```
+
+Requires a backing storage API. 
 
 ## Intention 
 Turnstile is intended to be used in CI to monitor values over time and optionally fail a build when those values change. Imagine running
