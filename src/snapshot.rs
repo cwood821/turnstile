@@ -1,17 +1,16 @@
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Snapshot {
   pub key: String,
-  pub value: usize,  
-  pub environment: String
+  pub value: u64, 
 }
 
 impl Snapshot { 
-  pub fn new(key: &str, value: usize, environment: &str) -> Self {
+  pub fn new(key: &str, value: u64) -> Self {
     Snapshot {
       key: key.to_string(),
       value, 
-      environment: environment.to_string() 
     }
   }
 

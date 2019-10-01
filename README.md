@@ -4,7 +4,7 @@
 
 ## Usage
 ```
-turnstile --key npm-vulnerabilities --value 12 --env local
+turnstile --key npm-vulnerabilities --value 12
 ```
 
 Requires a backing storage API. 

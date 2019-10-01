@@ -1,34 +1,75 @@
 use crate::snapshot::Snapshot;
 use std::fs::File;
-use std::io::Write;
+use std::vec::Vec;
+use reqwest::StatusCode;
 
 use reqwest::Client;
 
+#[derive(Debug)]
 pub enum StorageError {
-  FAILED_TO_STORE
-}
-
-
-pub trait Repository {
-    fn store(snapshot: Snapshot) -> Result<(), StorageError>;
-    fn get_count(project: &str, branch: &str) -> usize;
+  FailedToStore,
+  FailedToGet,
+  FailedToParse,
+  DoesNotExist
 }
 
 pub struct Storage {
-  // Some storage system that implements a storage trait
+  pub api_url: String,
+  snapshots: Box<Vec<Snapshot>>
 }
 
 impl Storage {
 
-  pub fn store(&self, snapshot: Snapshot) -> Result<(), StorageError> {
-    let mut file = File::create("foo.txt").map_err(|e| StorageError::FAILED_TO_STORE)?;
-    file.write_all(b"Hello, world!").map_err(|e| StorageError::FAILED_TO_STORE)?;
+  pub fn new (api_url: &str) -> Self {
+    Storage {
+      api_url: api_url.to_string(),
+      snapshots: Box::new(Vec::new())
+    }
+  }
 
-    // Make storage request to API for some key
-    let url = format!("localhost:3000/{}", snapshot.key());
-    let body = reqwest::get(&url).map_err(|e| StorageError::FAILED_TO_STORE)?;
+  pub fn has(&self, snapshot: &Snapshot) -> bool {
+    match self.get(&snapshot) {
+      Ok(_) => true,
+      Err(StorageError::FailedToParse) => {
+        false
+      }
+      Err(e) => {
+        println!("{:?}", e);
+        false
+      }
+    }
+  } 
 
-    // println!("{}", );
-    Ok(())
+  pub fn get(&self, snapshot: &Snapshot) -> Result<Snapshot, StorageError>  {
+    let url = format!("{}/{}", self.api_url, snapshot.key());
+
+    let mut resp = reqwest::get(&url)
+      .map_err(|e| StorageError::FailedToGet)?;
+      
+    match resp.status() {
+      StatusCode::OK => {
+        let json_val: Snapshot = resp.json().map_err(|e| StorageError::FailedToParse)?;
+        Ok(json_val) 
+      } 
+      StatusCode::NOT_FOUND => {
+        Err(StorageError::DoesNotExist)
+      },
+      // Could be any other status 500, 301, etc.
+      _ => Err(StorageError::FailedToGet)
+    }
+  }
+
+  pub fn store(&self, snapshot: &Snapshot) -> Result<Snapshot, StorageError> {
+    let client = reqwest::Client::new();
+    let url = format!("http://localhost:3000/{}", snapshot.key());
+
+    let result: Snapshot = client.post(&url)
+      .json(&snapshot)
+      .send()
+      .map_err(|e| StorageError::FailedToStore)?
+      .json()
+      .map_err(|e| StorageError::FailedToParse)?;
+
+    Ok(result)
   }
 }
