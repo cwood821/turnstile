@@ -38,7 +38,7 @@ fn main() {
     match snapshot.value.cmp(&stored_snapshot.value) { 
         Ordering::Less => {
             if opt.decrease {
-                exit("Value increased", 1)
+                exit("Value decreased", 1)
             }
         },
         Ordering::Greater => { 
@@ -49,6 +49,12 @@ fn main() {
         Ordering::Equal => println!("Equal")
     }
 
+    // At this point, if we haven't exited, we should try to update the value 
+     storage.store(&snapshot).unwrap_or_else(|_| {
+        exit("Failed to store value. Check connection to storage provider", 1)
+     });
+
+    ()
  }
 
 
