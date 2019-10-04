@@ -11,7 +11,6 @@ use structopt::StructOpt;
 use storage::StorageError;
 
 fn main() {
-    // Parse CLI args
     let opt = conf::Opt::from_args();
 
     if opt.key.is_empty() {
@@ -19,42 +18,41 @@ fn main() {
         process::exit(1);
     }
 
-    // Load up environmental configuration
     let storage = Storage::new("http://localhost:3000");
     let snapshot = Snapshot::new(&opt.key, opt.value);
-
-
-    // Change this to if let
-    // TODO: Cleanup error handling and conditionality
-    // TODO: Add flags for increase/decrease
-    // TODO: Add passive flag
 
     let stored_snapshot = match storage.get(&snapshot) {
         Ok(snap) => snap,
         Err(StorageError::DoesNotExist) => { 
-            println!("Attempting to store");
-            storage.store(&snapshot).unwrap()
-        }
-        _ => return ()
+            storage.store(&snapshot).unwrap_or_else(|e| {
+                if e == StorageError::FailedToStore {
+                   exit("Failed to store value. Check connection to storage provider", 1)
+                } else {
+                   snapshot.clone()
+                }
+            })
+        },
+        Err(_) => exit("Failed to retrieve value for key. Check connection to storage provider.", 1)
     };
 
     match snapshot.value.cmp(&stored_snapshot.value) { 
-        Ordering::Less => println!("Less"),
+        Ordering::Less => {
+            if opt.decrease {
+                exit("Value increased", 1)
+            }
+        },
         Ordering::Greater => { 
-            exit("Increased", 1);
+            if ! opt.decrease {
+                exit("Increased", 1);
+            }
         },
         Ordering::Equal => println!("Equal")
     }
 
-    // At this point, we should update it 
  }
 
 
-fn exit(msg: &str, code: i32) {
+fn exit(msg: &str, code: i32) -> ! {
     eprintln!("{}", msg);
     process::exit(code);
-}
-
-fn run() {
-    // 
 }

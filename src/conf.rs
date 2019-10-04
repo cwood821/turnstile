@@ -1,11 +1,11 @@
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "turnstile", about = "CI helper utility")]
+#[structopt(name = "turnstile", about = "CI helper utility", rename_all="kebab-case")]
 pub struct Opt {
-    /// Activate debug mode
-    #[structopt(short, long)]
-    pub debug: bool,
+    /// Fail on decrease in value 
+    #[structopt(long)]
+    pub decrease: bool,
 
     #[structopt(short = "k", long = "key", default_value = "")]
     pub key: String,

@@ -1,11 +1,9 @@
 use crate::snapshot::Snapshot;
-use std::fs::File;
-use std::vec::Vec;
 use reqwest::StatusCode;
 
 use reqwest::Client;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum StorageError {
   FailedToStore,
   FailedToGet,
@@ -15,7 +13,6 @@ pub enum StorageError {
 
 pub struct Storage {
   pub api_url: String,
-  snapshots: Box<Vec<Snapshot>>
 }
 
 impl Storage {
@@ -23,22 +20,8 @@ impl Storage {
   pub fn new (api_url: &str) -> Self {
     Storage {
       api_url: api_url.to_string(),
-      snapshots: Box::new(Vec::new())
     }
   }
-
-  pub fn has(&self, snapshot: &Snapshot) -> bool {
-    match self.get(&snapshot) {
-      Ok(_) => true,
-      Err(StorageError::FailedToParse) => {
-        false
-      }
-      Err(e) => {
-        println!("{:?}", e);
-        false
-      }
-    }
-  } 
 
   pub fn get(&self, snapshot: &Snapshot) -> Result<Snapshot, StorageError>  {
     let url = format!("{}/{}", self.api_url, snapshot.key());
@@ -48,7 +31,7 @@ impl Storage {
       
     match resp.status() {
       StatusCode::OK => {
-        let json_val: Snapshot = resp.json().map_err(|e| StorageError::FailedToParse)?;
+        let json_val: Snapshot = resp.json().map_err(|_| StorageError::FailedToParse)?;
         Ok(json_val) 
       } 
       StatusCode::NOT_FOUND => {
@@ -66,9 +49,9 @@ impl Storage {
     let result: Snapshot = client.post(&url)
       .json(&snapshot)
       .send()
-      .map_err(|e| StorageError::FailedToStore)?
+      .map_err(|_| StorageError::FailedToStore)?
       .json()
-      .map_err(|e| StorageError::FailedToParse)?;
+      .map_err(|_| StorageError::FailedToParse)?;
 
     Ok(result)
   }
