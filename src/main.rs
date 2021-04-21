@@ -1,64 +1,36 @@
-mod storage;
-mod snapshot;
 mod conf;
 
 use reqwest::Client;
 use std::cmp::Ordering;
 use std::process;
-use crate::storage::Storage;
-use crate::snapshot::Snapshot;
 use structopt::StructOpt;
-use storage::StorageError;
+use conf::Turnstile;
+// use storage::StorageError;
 
 fn main() {
-    let opt = conf::Opt::from_args();
+    // let opt = conf::Opt::from_args();
 
-    if opt.key.is_empty() {
-        eprintln!("Key must not be empty");
-        process::exit(1);
+    // if opt.key.is_empty() {
+    //     eprintln!("Key must not be empty");
+    //     process::exit(1);
+    // }
+
+    match Turnstile::from_args() {
+        Turnstile::Get { key } => {
+            // println!("{:?}", interactive);
+            println!("{:?}", key);
+            // Get key from request 
+            // Make reqwest to store to fetch key
+            // handle storage error 
+            // return most recent value, date format 
+            println!("from get")
+        },
+        _ => {
+            println!("command not supported");
+            ()
+        },
     }
-
-    let storage = Storage::new("http://localhost:3000");
-    let snapshot = Snapshot::new(&opt.key, opt.value);
-
-    let stored_snapshot = match storage.get(&snapshot) {
-        Ok(snap) => snap,
-        Err(StorageError::DoesNotExist) => { 
-            storage.store(&snapshot).unwrap_or_else(|e| {
-                if e == StorageError::FailedToStore {
-                   exit("Failed to store value. Check connection to storage provider", 1)
-                } else {
-                   snapshot.clone()
-                }
-            })
-        },
-        Err(_) => exit("Failed to retrieve value for key. Check connection to storage provider.", 1)
-    };
-
-    match snapshot.value.cmp(&stored_snapshot.value) { 
-        Ordering::Less => {
-            if opt.decrease {
-                exit("Value decreased", 1)
-            }
-        },
-        Ordering::Greater => { 
-            if ! opt.decrease {
-                exit("Increased", 1);
-            }
-        },
-        Ordering::Equal => println!("Equal")
-    }
-
-    // At this point, if we haven't exited, we should try to update the value 
-     storage.store(&snapshot).unwrap_or_else(|_| {
-        exit("Failed to store value. Check connection to storage provider", 1)
-     });
+    // let store = Storage::new("http://localhost:3000");
 
     ()
  }
-
-
-fn exit(msg: &str, code: i32) -> ! {
-    eprintln!("{}", msg);
-    process::exit(code);
-}

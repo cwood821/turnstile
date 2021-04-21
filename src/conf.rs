@@ -1,15 +1,26 @@
 use structopt::StructOpt;
+use std::path::PathBuf;
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "turnstile", about = "CI helper utility", rename_all="kebab-case")]
-pub struct Opt {
-    /// Fail on decrease in value 
-    #[structopt(long)]
-    pub decrease: bool,
-
-    #[structopt(short = "k", long = "key", default_value = "")]
-    pub key: String,
-
-    #[structopt(short = "v", long = "value", default_value = "0")]
-    pub value: u64,
+#[derive(StructOpt)]
+#[structopt(name = "turnstile", about = "get, set, and compare data", rename_all="kebab-case")]
+pub enum Turnstile {
+    /// Get the most recent value of a key 
+    Get {
+        key: String,
+    },
+    /// Record a value for a key. When no date is provided, system time is used. 
+    Record {
+        key: String,
+        #[structopt(long)]
+        date: bool,
+        // #[structopt(long)]
+        // all: bool,
+        // repository: Option<String>
+    },
+    // Commit {
+    //     #[structopt(short)]
+    //     message: Option<String>,
+    //     #[structopt(short)]
+    //     all: bool
+    // }
 }
