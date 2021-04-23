@@ -2,7 +2,7 @@ use structopt::StructOpt;
 use std::path::PathBuf;
 
 #[derive(StructOpt)]
-#[structopt(name = "turnstile", about = "get, set, and compare data", rename_all="kebab-case")]
+#[structopt(name = "turnstile", about = "record, retrieve, and compare data", rename_all="kebab-case")]
 pub enum Turnstile {
     /// Get the most recent value of a key 
     Get {
@@ -16,11 +16,5 @@ pub enum Turnstile {
         // #[structopt(long)]
         // all: bool,
         // repository: Option<String>
-    },
-    // Commit {
-    //     #[structopt(short)]
-    //     message: Option<String>,
-    //     #[structopt(short)]
-    //     all: bool
-    // }
+    }
 }
