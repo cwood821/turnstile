@@ -10,29 +10,24 @@ use store::Store;
 use std::io::{Error, ErrorKind};
 // use std::box::Box;
 
-// use storage::StorageError;
+enum AppError {
+    UnsupportedError = 64,
+    IOError = 74,
+    ConfigurationError = 78
+}
 
 fn main() {
     // TODO: make enum that maps errors types to codes
     std::process::exit(match app() {
         Ok(_) => 0,
         Err(err) => {
-            eprintln!("error: {:?}", err);
-            1
+            // TODO: print to stderr message
+            err as i32
         }
     });
 }
 
-fn app() -> Result<(), Box<dyn std::error::Error>> {
-    // let opt = conf::Opt::from_args();
-
-    // if opt.key.is_empty() {
-    //     eprintln!("Key must not be empty");
-    //     process::exit(1);
-    // }
-
-    let client = reqwest::blocking::Client::new();
-
+fn app() -> Result<i32, AppError> {
     match Turnstile::from_args() {
         Turnstile::Get { key } => {
             // TODO: make url config
@@ -41,25 +36,19 @@ fn app() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             // TODO: Imple formatter for json/text
-            let res = api.get(key);
-            // TODO: Handle if key is an error and return exit with relevant status code from
-            // https://www.freebsd.org/cgi/man.cgi?query=sysexits&apropos=0&sektion=0&manpath=FreeBSD+4.3-RELEASE&format=html
-
-            match res {
-                Ok(value) => {
-                    println!("{}", value);
-                    Ok(())
+            match api.get(key) {
+                Ok(record) => {
+                    println!("{:?}", record);
+                    println!("{}", record.value);
+                    Ok(0)
                 }
                 Err(_) => {
-                    let err = Error::new(ErrorKind::Other, "oh no!"); 
-                    Err(Box::new(err))
+                    Err(AppError::IOError)
                 }
             }
         },
         _ => {
-            println!("command not supported");
-            let err = Error::new(ErrorKind::Other, "oh no!");
-            Err(Box::new(err))
+            Err(AppError::UnsupportedError)
         },
     }
 
