@@ -1,4 +1,4 @@
-use::serde::Deserialize;
+use::serde::{Serialize, Deserialize};
 
 
 pub struct Store {
@@ -11,7 +11,7 @@ enum StorageError {
   DoesNotExist
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Record {
   pub key: String,
   pub value: f64,
@@ -19,6 +19,7 @@ pub struct Record {
 }
 
 impl Store {
+  
   pub fn get(self: Self, key: String) -> Result<Record, reqwest::Error> {
     let client = reqwest::blocking::Client::new();
     let res = client.get(format!("{}/{}", self.url, key))
@@ -29,10 +30,18 @@ impl Store {
 
     Ok(record)
   }
-  // pub fn add(self: Self, record: Record) -> Result<Record, reqwest::Error> {
-  //   // post to api
-  //   // confirm response is okay
-  // }
+
+  pub fn add(self: Self, record: Record) -> Result<Record, reqwest::Error> {
+    let client = reqwest::blocking::Client::new();
+
+    let res = client.post(format!("{}", self.url))
+      .json(&record)
+      .send()?;
+
+    let rec: Record = res.json()?;
+
+    Ok(rec)
+  }
 }
 
 

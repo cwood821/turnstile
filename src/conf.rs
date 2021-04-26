@@ -12,8 +12,8 @@ pub enum Turnstile {
     Record {
         key: String,
         value: f64,
-        // #[structopt(long)]
-        // date: bool,
+        #[structopt(long)]
+        date: Option<u64>,
         // #[structopt(long)]
         // all: bool,
         // repository: Option<String>
