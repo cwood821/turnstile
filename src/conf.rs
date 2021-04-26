@@ -11,8 +11,9 @@ pub enum Turnstile {
     /// Record a value for a key. When no date is provided, system time is used. 
     Record {
         key: String,
-        #[structopt(long)]
-        date: bool,
+        value: f64,
+        // #[structopt(long)]
+        // date: bool,
         // #[structopt(long)]
         // all: bool,
         // repository: Option<String>

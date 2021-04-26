@@ -1,5 +1,6 @@
 use::serde::Deserialize;
 
+
 pub struct Store {
   pub url: String
 }
@@ -14,13 +15,12 @@ enum StorageError {
 pub struct Record {
   pub key: String,
   pub value: f64,
-  pub date: i32 
+  pub date: u64 
 }
 
 impl Store {
   pub fn get(self: Self, key: String) -> Result<Record, reqwest::Error> {
     let client = reqwest::blocking::Client::new();
-    println!("pre req");
     let res = client.get(format!("{}/{}", self.url, key))
       .send()?;
 
@@ -29,6 +29,10 @@ impl Store {
 
     Ok(record)
   }
+  // pub fn add(self: Self, record: Record) -> Result<Record, reqwest::Error> {
+  //   // post to api
+  //   // confirm response is okay
+  // }
 }
 
 
