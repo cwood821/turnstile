@@ -17,6 +17,18 @@ pub struct Record {
   pub date: u64 
 }
 
+type Key = String;
+
+#[derive(Serialize, Deserialize, Debug)]
+struct RecordsResult {
+  pub data: Vec<Record>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct KeysResult {
+  pub data: Vec<Key>
+}
+
 impl Store {
 
   pub fn get(self: Self, key: String, count: u64) -> Result<Vec<Record>, reqwest::Error> {
@@ -25,9 +37,9 @@ impl Store {
       .send()?;
 
     // TODO: map json parse error
-    let record: Vec<Record> = res.json()?;
+    let result: RecordsResult = res.json()?;
 
-    Ok(record)
+    Ok(result.data)
   }
 
   pub fn add(self: Self, record: Record) -> Result<Record, reqwest::Error> {
@@ -48,9 +60,9 @@ impl Store {
       .send()?;
 
     // TODO: map json parse error
-    let keys: Vec<String> = res.json()?;
+    let result: KeysResult = res.json()?;
 
-    Ok(keys)
+    Ok(result.data)
   }
 
 }
