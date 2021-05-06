@@ -68,8 +68,6 @@ fn app() -> Result<i32, AppError> {
 
             match api.add(record) {
                 Ok(record) => {
-                    println!("{:?}", record);
-                    println!("{}", record.value);
                     Ok(0)
                 }
                 Err(_) => {
