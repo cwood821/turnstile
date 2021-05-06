@@ -1,6 +1,5 @@
 use::serde::{Serialize, Deserialize};
 
-
 pub struct Store {
   pub url: String
 }
@@ -19,14 +18,14 @@ pub struct Record {
 }
 
 impl Store {
-  
-  pub fn get(self: Self, key: String) -> Result<Record, reqwest::Error> {
+
+  pub fn get(self: Self, key: String, count: u64) -> Result<Vec<Record>, reqwest::Error> {
     let client = reqwest::blocking::Client::new();
-    let res = client.get(format!("{}/{}", self.url, key))
+    let res = client.get(format!("{}/{}?count={}", self.url, key, count))
       .send()?;
 
     // TODO: map json parse error
-    let record: Record = res.json()?;
+    let record: Vec<Record> = res.json()?;
 
     Ok(record)
   }
@@ -34,7 +33,7 @@ impl Store {
   pub fn add(self: Self, record: Record) -> Result<Record, reqwest::Error> {
     let client = reqwest::blocking::Client::new();
 
-    let res = client.post(format!("{}", self.url))
+    let res = client.post(self.url.to_string())
       .json(&record)
       .send()?;
 

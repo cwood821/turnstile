@@ -7,6 +7,8 @@ pub enum Turnstile {
     /// Get the most recent value of a key 
     Get {
         key: String,
+        #[structopt(long)]
+        count: Option<u64>,
     },
     /// Record a value for a key. When no date is provided, system time is used. 
     Record {
@@ -17,5 +19,10 @@ pub enum Turnstile {
         // #[structopt(long)]
         // all: bool,
         // repository: Option<String>
+    },
+    /// List available keys 
+    Keys {
+        // #[structopt(long)]
+        // all: bool,
     }
 }

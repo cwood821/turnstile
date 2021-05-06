@@ -33,12 +33,15 @@ fn app() -> Result<i32, AppError> {
     };
 
     match Turnstile::from_args() {
-        Turnstile::Get { key } => {
+        Turnstile::Get { key, count } => {
             // TODO: Imple formatter for json/text
-            match api.get(key) {
-                Ok(record) => {
-                    println!("{:?}", record);
-                    println!("{}", record.value);
+            let count = count.unwrap_or(1);
+
+            match api.get(key, count) {
+                Ok(records) => {
+                    for record in records {
+                        println!("{}", record.value);
+                    }
                     Ok(0)
                 }
                 Err(_) => {
@@ -73,7 +76,8 @@ fn app() -> Result<i32, AppError> {
                     Err(AppError::IOError)
                 }
             }
-        }
+        },
+
         _ => {
             Err(AppError::UnsupportedError)
         },
