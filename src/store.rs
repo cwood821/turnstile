@@ -21,7 +21,7 @@ impl Store {
 
   pub fn get(self: Self, key: String, count: u64) -> Result<Vec<Record>, reqwest::Error> {
     let client = reqwest::blocking::Client::new();
-    let res = client.get(format!("{}/{}?count={}", self.url, key, count))
+    let res = client.get(format!("{}/keys/{}?count={}", self.url, key, count))
       .send()?;
 
     // TODO: map json parse error
@@ -41,6 +41,18 @@ impl Store {
 
     Ok(rec)
   }
+
+  pub fn get_keys(self: Self) -> Result<Vec<String>, reqwest::Error> {
+    let client = reqwest::blocking::Client::new();
+    let res = client.get(format!("{}/keys", self.url))
+      .send()?;
+
+    // TODO: map json parse error
+    let keys: Vec<String> = res.json()?;
+
+    Ok(keys)
+  }
+
 }
 
 

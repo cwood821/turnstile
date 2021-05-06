@@ -78,6 +78,20 @@ fn app() -> Result<i32, AppError> {
             }
         },
 
+        Turnstile::Keys { } => {
+            match api.get_keys() {
+                Ok(keys) => {
+                    for key in keys {
+                        println!("{}", key);
+                    }
+                    Ok(0)
+                }
+                Err(_) => {
+                    Err(AppError::IOError)
+                }
+            }
+        },
+
         _ => {
             Err(AppError::UnsupportedError)
         },
