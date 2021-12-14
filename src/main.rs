@@ -9,6 +9,13 @@ use structopt::StructOpt;
 use conf::Turnstile;
 use store::{Store, Record};
 use std::io::{Error, ErrorKind};
+use elasticsearch::{
+    Elasticsearch, Error as ElasticError,
+    http::transport::Transport,
+    cat::CatIndicesParts,
+    indices::{IndicesCreateParts}
+};
+use serde_json::json;
 
 enum AppError {
     UnsupportedError = 64,
@@ -17,19 +24,25 @@ enum AppError {
     ApplicationError = 70
 }
 
-fn main() {
-    std::process::exit(match app() {
+impl From<elasticsearch::Error> for AppError {
+    fn from(_: ElasticError) -> Self {
+        return AppError::ApplicationError;
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    std::process::exit(match app().await {
         Ok(_) => 0,
         Err(err) => err as i32
     });
 }
 
-fn app() -> Result<i32, AppError> {
-
-    let base = env::var("API_URL").map_err(|_| AppError::ConfigurationError)?;
-
+async fn app() -> Result<i32, AppError> {
+    // let base = env::var("API_URL").map_err(|_| AppError::ConfigurationError)?;
+    let base = "http://localhost:3000";
     let api = Store {
-        url: base
+        url: base.to_string()
     };
 
     match Turnstile::from_args() {
@@ -49,14 +62,13 @@ fn app() -> Result<i32, AppError> {
                 }
             }
         },
-
         Turnstile::Record { key, value, date } => {
             let now = if date.is_some() {
                 date.unwrap()
             } else {
                 SystemTime::now()
                     .duration_since(UNIX_EPOCH)
-                    .map(|val| val.as_secs())
+                    .map(|val| val.as_secs() - 1540)
                     .map_err(|_| AppError::ApplicationError)?
             };
 
@@ -66,8 +78,8 @@ fn app() -> Result<i32, AppError> {
                 date: now 
             };
 
-            match api.add(record) {
-                Ok(record) => {
+            match api.add(record).await {
+                Ok(_record) => {
                     Ok(0)
                 }
                 Err(_) => {
@@ -75,7 +87,6 @@ fn app() -> Result<i32, AppError> {
                 }
             }
         },
-
         Turnstile::Keys { } => {
             match api.get_keys() {
                 Ok(keys) => {
@@ -89,10 +100,12 @@ fn app() -> Result<i32, AppError> {
                 }
             }
         },
-
+        Turnstile::Index { name } => {
+            api.create_index(&name).await?;
+            Ok(0)
+        },
         _ => {
             Err(AppError::UnsupportedError)
         },
     }
-
  }

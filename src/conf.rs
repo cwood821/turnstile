@@ -21,5 +21,9 @@ pub enum Turnstile {
     Keys {
         // #[structopt(long)]
         // all: bool,
-    }
+    },
+    /// Create an index with the given name
+    Index {
+        name: String,
+    },
 }
