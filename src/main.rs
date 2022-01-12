@@ -1,64 +1,116 @@
-mod storage;
-mod snapshot;
 mod conf;
+mod store;
 
-use reqwest::Client;
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::cmp::Ordering;
+use std::env;
 use std::process;
-use crate::storage::Storage;
-use crate::snapshot::Snapshot;
 use structopt::StructOpt;
-use storage::StorageError;
+use conf::Turnstile;
+use store::{Store, Record};
+use std::io::{Error, ErrorKind};
+use elasticsearch::{
+    Elasticsearch, Error as ElasticError,
+    http::transport::Transport,
+    cat::CatIndicesParts,
+    indices::{IndicesCreateParts}
+};
+use serde_json::json;
 
-fn main() {
-    let opt = conf::Opt::from_args();
+enum AppError {
+    UnsupportedError = 64,
+    IOError = 74,
+    ConfigurationError = 78,
+    ApplicationError = 70
+}
 
-    if opt.key.is_empty() {
-        eprintln!("Key must not be empty");
-        process::exit(1);
+impl From<elasticsearch::Error> for AppError {
+    fn from(_: ElasticError) -> Self {
+        return AppError::ApplicationError;
     }
+}
 
-    let storage = Storage::new("http://localhost:3000");
-    let snapshot = Snapshot::new(&opt.key, opt.value);
+impl From<serde_json::Error> for AppError {
+    fn from(_: serde_json::Error) -> Self {
+        return AppError::ApplicationError;
+    }
+}
 
-    let stored_snapshot = match storage.get(&snapshot) {
-        Ok(snap) => snap,
-        Err(StorageError::DoesNotExist) => { 
-            storage.store(&snapshot).unwrap_or_else(|e| {
-                if e == StorageError::FailedToStore {
-                   exit("Failed to store value. Check connection to storage provider", 1)
-                } else {
-                   snapshot.clone()
-                }
-            })
-        },
-        Err(_) => exit("Failed to retrieve value for key. Check connection to storage provider.", 1)
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    std::process::exit(match app().await {
+        Ok(_) => 0,
+        Err(err) => err as i32
+    });
+}
+
+async fn app() -> Result<i32, AppError> {
+    // let base = env::var("API_URL").map_err(|_| AppError::ConfigurationError)?;
+    let base = "http://localhost:3000";
+    let api = Store {
+        url: base.to_string()
     };
 
-    match snapshot.value.cmp(&stored_snapshot.value) { 
-        Ordering::Less => {
-            if opt.decrease {
-                exit("Value decreased", 1)
+    match Turnstile::from_args() {
+        Turnstile::Get { key, count } => {
+            // TODO: Imple formatter for json/text
+            let count = count.unwrap_or(1);
+
+            match api.get(key, count).await {
+                Ok(record) => {
+                    let output = serde_json::to_string(&record)?;
+                    println!("{}", output);
+                    Ok(0)
+                }
+                Err(_) => {
+                    Err(AppError::IOError)
+                }
             }
         },
-        Ordering::Greater => { 
-            if ! opt.decrease {
-                exit("Increased", 1);
+        Turnstile::Record { key, value, date } => {
+            let now = if date.is_some() {
+                date.unwrap()
+            } else {
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map(|val| val.as_secs() - 1540)
+                    .map_err(|_| AppError::ApplicationError)?
+            };
+
+            let record = Record {
+                key: key,
+                value: value,
+                date: now 
+            };
+
+            match api.add(record).await {
+                Ok(_record) => {
+                    Ok(0)
+                }
+                Err(_) => {
+                    Err(AppError::IOError)
+                }
             }
         },
-        Ordering::Equal => println!("Equal")
+        Turnstile::Keys { } => {
+            match api.get_keys() {
+                Ok(keys) => {
+                    for key in keys {
+                        println!("{}", key);
+                    }
+                    Ok(0)
+                }
+                Err(_) => {
+                    Err(AppError::IOError)
+                }
+            }
+        },
+        Turnstile::Index { name } => {
+            api.create_index(&name).await?;
+            Ok(0)
+        },
+        _ => {
+            Err(AppError::UnsupportedError)
+        },
     }
-
-    // At this point, if we haven't exited, we should try to update the value 
-     storage.store(&snapshot).unwrap_or_else(|_| {
-        exit("Failed to store value. Check connection to storage provider", 1)
-     });
-
-    ()
  }
-
-
-fn exit(msg: &str, code: i32) -> ! {
-    eprintln!("{}", msg);
-    process::exit(code);
-}
