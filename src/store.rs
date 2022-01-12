@@ -1,18 +1,22 @@
 use::serde::{Serialize, Deserialize};
 use elasticsearch::{
-  Elasticsearch, Error as ElasticError,
+  Elasticsearch, 
+  Error as ElasticError,
   http::transport::Transport,
   cat::CatIndicesParts,
   indices::{IndicesCreateParts},
+  SearchParts,
   IndexParts
 };
 use serde_json::json;
+use serde_json::Value;
+use std::io::{Error, ErrorKind};
 
 pub struct Store {
   pub url: String
 }
 
-enum StorageError {
+pub enum StorageError {
   NetworkError,
   ResponseFormatError,
   DoesNotExist
@@ -37,32 +41,57 @@ struct KeysResult {
   pub data: Vec<Key>
 }
 
+impl From<elasticsearch::Error> for StorageError {
+  fn from(error: elasticsearch::Error) -> Self {
+    StorageError::NetworkError
+  }
+}
+
 impl Store {
 
-  pub fn get(self: Self, key: String, count: u64) -> Result<Vec<Record>, elasticsearch::Error> {
-    let client = reqwest::blocking::Client::new();
-    let res = client.get(format!("{}/keys/{}?count={}", self.url, key, count))
-      .send()?;
-    // let transport = Transport::single_node("http://localhost:9200")?;
-    // let client = Elasticsearch::new(transport);
+  pub async fn get(self: Self, key: String, count: u64) -> Result<Record, StorageError> {
+    let transport = Transport::single_node("http://localhost:9200")?;
+    let client = Elasticsearch::new(transport);
 
-    // let response = client
-    // .index(IndexParts::IndexId("tweets", "1"))
-    // .body(json!({
-    //     "key": key,
-    //     "value": count,
-    //     "post_date": "2009-11-15T00:00:00Z",
-    //     "message": "Trying out Elasticsearch, so far so good?"
-    // }))
-    // .send()
-    // .await?;
+    // Search for key, then sort by date and pop most recent
+    let response = client
+      .search(SearchParts::Index(&["test"]))
+      .from(0)
+      .size(1)
+      .body(json!({
+          "size": "5",
+          "sort" : [
+            { 
+              "date" : {
+                "format": "epoch_millis",
+                "order": "desc"
+              }
+            },
+          ],
+          "query": {
+              "match": {
+                  "key": key 
+              }
+          }
+      }))
+      .send()
+      .await?;
 
-    // let successful = response.status_code().is_success();
+    if (response.status_code().is_success()) {
+      let response_body = response.json::<Value>().await?;
+      let resp =  &response_body["hits"]["hits"].as_array().unwrap()[0]["_source"]; 
 
-    // TODO: map json parse error
-    let result: RecordsResult = res.json()?;
+      let record = Record {
+        value: resp.get("value").unwrap().as_f64().unwrap(),
+        date: resp.get("date").unwrap().as_u64().unwrap(),
+        key: resp.get("key").unwrap().to_string()
+      };
 
-    Ok(result.data)
+      Ok(record)
+    } else {
+      return Err(StorageError::NetworkError) 
+    }
+
   }
 
   pub async fn add(self: Self, record: Record) -> Result<Record, elasticsearch::Error> {
@@ -143,7 +172,7 @@ impl Store {
     .send()
     .await?;
 
-    println!("created index {}", name);
+    println!("Created index {}", name);
     Ok(())
   }
 

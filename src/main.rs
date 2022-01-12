@@ -30,6 +30,12 @@ impl From<elasticsearch::Error> for AppError {
     }
 }
 
+impl From<serde_json::Error> for AppError {
+    fn from(_: serde_json::Error) -> Self {
+        return AppError::ApplicationError;
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::process::exit(match app().await {
@@ -50,11 +56,10 @@ async fn app() -> Result<i32, AppError> {
             // TODO: Imple formatter for json/text
             let count = count.unwrap_or(1);
 
-            match api.get(key, count) {
-                Ok(records) => {
-                    for record in records {
-                        println!("{}", record.value);
-                    }
+            match api.get(key, count).await {
+                Ok(record) => {
+                    let output = serde_json::to_string(&record)?;
+                    println!("{}", output);
                     Ok(0)
                 }
                 Err(_) => {
